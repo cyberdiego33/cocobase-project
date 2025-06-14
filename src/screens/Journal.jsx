@@ -45,10 +45,10 @@ const DailyJournal = () => {
   }, []);
 
   const filteredEntries = entries.filter(entry => {
-    const matchesDate = !selectedDate || entry.date === selectedDate;
-    const matchesSearch = !searchTerm || entry.content.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesDate && matchesSearch;
-  });
+  const matchesDate = !selectedDate || entry.data.date === selectedDate;
+  const matchesSearch = !searchTerm || entry.data.content.toLowerCase().includes(searchTerm.toLowerCase());
+  return matchesDate && matchesSearch;
+});
 
   const totalPages = Math.ceil(filteredEntries.length / entriesPerPage);
   const paginatedEntries = filteredEntries.slice(
