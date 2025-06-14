@@ -13,21 +13,25 @@ import {
   Cloud,
   Loader,
   MoreVertical,
+  UserCircle,
+  ChevronDown,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const DailyJournal = () => {
+const DailyJournal = ({ isPublic = true }) => {
   const [entries, setEntries] = useState([]);
-
-  // newly added
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  // newly added
-
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEntry, setNewEntry] = useState({ text: "", mood: "happy" });
   const [selectedDate, setSelectedDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAuthDropdown, setShowAuthDropdown] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [removingId, setRemovingId] = useState(null);
 
   const entriesPerPage = 3;
 
@@ -64,28 +68,57 @@ const DailyJournal = () => {
     },
   };
 
-  // newly added
+  const navigate = useNavigate();
+
+  // Auth check on mount
+  useEffect(() => {
+    db.getCurrentUser()
+      .then((u) => {
+        setUser(u);
+        setIsAuthenticated(!!u);
+      })
+      .catch(() => {
+        setUser(null);
+        setIsAuthenticated(false);
+      });
+  }, []);
+
+  // Fetch entries with filtering
   const fetchEntries = async () => {
     try {
       setLoading(true);
       const allEntries = await db.listDocuments("journal-entries");
-      const sortedEntries = allEntries.sort((a, b) => {
-  // Try timestamp first, then fall back to created_at
-      const dateA = new Date(a.data.timestamp || a.created_at);
-      const dateB = new Date(b.data.timestamp || b.created_at);
-      return dateB - dateA; // Most recent first
-    });
+      let filtered = allEntries;
+      if (isPublic) {
+        // Only show public entries that are not private (no userId or userId is null/empty)
+        filtered = allEntries.filter(
+          (entry) =>
+            entry.data.published === true &&
+            (!entry.data.userId ||
+              entry.data.userId === null ||
+              entry.data.userId === "")
+        );
+      } else if (user) {
+        filtered = allEntries.filter((entry) => entry.data.userId === user.id);
+      } else {
+        filtered = [];
+      }
+      const sortedEntries = filtered.sort((a, b) => {
+        const dateA = new Date(a.data.timestamp || a.created_at);
+        const dateB = new Date(b.data.timestamp || b.created_at);
+        return dateB - dateA;
+      });
       setEntries(sortedEntries);
     } catch (error) {
-      console.error("Error fetching entries:", error);
+      // Optionally log error
     } finally {
       setLoading(false);
     }
   };
-  //newly added
   useEffect(() => {
     fetchEntries();
-  }, []);
+    // eslint-disable-next-line
+  }, [user, isPublic]);
 
   const filteredEntries = entries.filter((entry) => {
     const matchesDate = !selectedDate || entry.data.date === selectedDate;
@@ -112,6 +145,8 @@ const DailyJournal = () => {
           date: new Date().toISOString().split("T")[0],
           timestamp: new Date().toISOString(),
           published: true,
+          userId: user?.id,
+          userEmail: user?.email,
         };
 
         const savedEntry = await db.createDocument(
@@ -122,18 +157,12 @@ const DailyJournal = () => {
         setNewEntry({ text: "", mood: "happy" });
         setShowAddForm(false);
       } catch (error) {
-        console.error("Full error details:", error);
-        console.error("Error response:", error.response?.data);
         alert("Failed to save entry. Please try again.");
       } finally {
         setSubmitting(false);
       }
     }
   };
-
-  // State to track which entry's menu is open and which is loading for removal
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const [removingId, setRemovingId] = useState(null);
 
   // Function to delete an entry by id, with loading effect
   const handleRemove = async (id) => {
@@ -158,9 +187,7 @@ const DailyJournal = () => {
   };
 
   const formatDate = (date) => {
-    console.log("Raw date from entry:", date); // Debug line
     if (!date) return "Invalid Date";
-
     try {
       const formattedDate = new Date(date + "T00:00:00").toLocaleDateString(
         "en-US",
@@ -171,16 +198,30 @@ const DailyJournal = () => {
           day: "numeric",
         }
       );
-      console.log("Formatted date:", formattedDate); // Debug line
       return formattedDate;
     } catch (error) {
-      console.error("Date formatting error:", error);
       return "Invalid Date";
     }
   };
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedDate, searchTerm]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (
+        !e.target.closest("#auth-dropdown-btn") &&
+        !e.target.closest("#auth-dropdown-menu")
+      ) {
+        setShowAuthDropdown(false);
+      }
+    };
+    if (showAuthDropdown) {
+      document.addEventListener("mousedown", handleClick);
+    }
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showAuthDropdown]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
@@ -208,7 +249,6 @@ const DailyJournal = () => {
                 className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm"
               />
             </div>
-
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -219,14 +259,77 @@ const DailyJournal = () => {
               />
             </div>
           </div>
-
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            <Plus className="w-4 h-4" />
-            New Entry
-          </button>
+          <div className="flex gap-4 items-center relative">
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+              disabled={isPublic && !isAuthenticated}
+            >
+              <Plus className="w-4 h-4" />
+              New Entry
+            </button>
+            {/* My Entries Button with Dropdown */}
+            <div className="relative">
+              <button
+                id="auth-dropdown-btn"
+                onClick={() => setShowAuthDropdown((v) => !v)}
+                className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:from-blue-600 hover:to-teal-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 focus:outline-none"
+              >
+                <UserCircle className="w-5 h-5" />
+                My Entries
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    showAuthDropdown ? "rotate-180" : "rotate-0"
+                  }`}
+                />
+              </button>
+              {/* Dropdown menu */}
+              <div
+                id="auth-dropdown-menu"
+                className={`absolute right-0 mt-2 w-56 bg-white/80 backdrop-blur-lg border border-gray-200 rounded-xl shadow-xl z-20 overflow-hidden transition-all duration-300 ${
+                  showAuthDropdown
+                    ? "opacity-100 visible translate-y-0"
+                    : "opacity-0 invisible -translate-y-2"
+                }`}
+                style={{ pointerEvents: showAuthDropdown ? "auto" : "none" }}
+              >
+                {!isAuthenticated ? (
+                  <>
+                    <button
+                      className="w-full text-left px-6 py-3 text-gray-800 hover:bg-blue-50 transition-all duration-200 font-medium text-base"
+                      onClick={() => {
+                        setShowAuthDropdown(false);
+                        navigate("/auth");
+                      }}
+                    >
+                      Create an Account
+                    </button>
+                    <button
+                      className="w-full text-left px-6 py-3 text-gray-800 hover:bg-blue-50 transition-all duration-200 font-medium text-base border-t border-gray-100"
+                      onClick={() => {
+                        setShowAuthDropdown(false);
+                        navigate("/auth");
+                      }}
+                    >
+                      Sign In to Your Account
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="w-full text-left px-6 py-3 text-red-600 hover:bg-red-50 transition-all duration-200 font-medium text-base"
+                    onClick={async () => {
+                      await db.logout();
+                      setUser(null);
+                      setIsAuthenticated(false);
+                      navigate("/");
+                    }}
+                  >
+                    Logout
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Add Entry Form */}
@@ -323,8 +426,6 @@ const DailyJournal = () => {
             </div>
           ) : (
             paginatedEntries.map((entry, index) => {
-              console.log("Full entry object:", entry);
-
               const moodConfig =
                 moodEmojis[entry.data.mood] || moodEmojis.neutral;
               const IconComponent = moodConfig.icon;
@@ -362,7 +463,11 @@ const DailyJournal = () => {
                       <div className="relative">
                         <button
                           className="p-1 text-gray-400 hover:text-gray-700 focus:outline-none"
-                          onClick={() => setOpenMenuId(openMenuId === entry.id ? null : entry.id)}
+                          onClick={() =>
+                            setOpenMenuId(
+                              openMenuId === entry.id ? null : entry.id
+                            )
+                          }
                           aria-label="Open menu"
                         >
                           <MoreVertical className="w-5 h-5" />
