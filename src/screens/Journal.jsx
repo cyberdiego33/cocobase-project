@@ -1,30 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Calendar, Clock, Smile, Meh, Frown, Heart, Sun, Cloud } from 'lucide-react';
+import db from '../utils/cocbase';
+import { Plus, Search, Calendar, Clock, Smile, Meh, Frown, Heart, Sun, Cloud, Loader } from 'lucide-react';
 
 const DailyJournal = () => {
-  const [entries, setEntries] = useState([
-    {
-      id: 1,
-      text: "Had an amazing day at the park with friends. The weather was perfect and we played frisbee for hours. Feeling grateful for these moments.",
-      mood: "happy",
-      date: "2024-06-13",
-      timestamp: "2024-06-13T14:30:00Z"
-    },
-    {
-      id: 2,
-      text: "Work was challenging today but I learned a lot. Sometimes the difficult days teach us the most about ourselves.",
-      mood: "neutral",
-      date: "2024-06-12",
-      timestamp: "2024-06-12T18:15:00Z"
-    },
-    {
-      id: 3,
-      text: "Feeling a bit overwhelmed with everything on my plate. Need to remember to take breaks and breathe.",
-      mood: "sad",
-      date: "2024-06-11",
-      timestamp: "2024-06-11T21:45:00Z"
-    }
-  ]);
+  const [entries, setEntries] = useState([]);
+
+  // newly added 
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  // newly added 
   
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEntry, setNewEntry] = useState({ text: '', mood: 'happy' });
@@ -42,9 +26,27 @@ const DailyJournal = () => {
     grateful: { icon: Heart, color: 'text-pink-500', bg: 'bg-pink-50', label: 'Grateful' }
   };
 
+  // newly added
+  const fetchEntries = async () => {
+  try {
+    setLoading(true);
+    const allEntries = await db.listDocuments("journal-entries");
+    const sortedEntries = allEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    setEntries(sortedEntries);
+  } catch (error) {
+    console.error('Error fetching entries:', error);
+  } finally {
+    setLoading(false);
+  }
+  };
+  //newly added
+  useEffect(() => {
+  fetchEntries();
+  }, []);
+
   const filteredEntries = entries.filter(entry => {
     const matchesDate = !selectedDate || entry.date === selectedDate;
-    const matchesSearch = !searchTerm || entry.text.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || entry.content.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesDate && matchesSearch;
   });
 
@@ -54,20 +56,32 @@ const DailyJournal = () => {
     currentPage * entriesPerPage
   );
 
-  const handleAddEntry = () => {
-    if (newEntry.text.trim()) {
-      const entry = {
-        id: Date.now(),
-        text: newEntry.text,
+  const handleAddEntry = async () => {
+  if (newEntry.text.trim()) {
+    try {
+      setSubmitting(true);
+      const entryData = {
+        title: `Journal Entry - ${new Date().toLocaleDateString()}`, // Add required title field
+        content: newEntry.text, // Use 'content' instead of 'text'
         mood: newEntry.mood,
         date: new Date().toISOString().split('T')[0],
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        published: true
       };
-      setEntries([entry, ...entries]);
+      
+      const savedEntry = await db.createDocument("journal-entries", entryData);
+      setEntries([savedEntry, ...entries]);
       setNewEntry({ text: '', mood: 'happy' });
       setShowAddForm(false);
+    } catch (error) {
+      console.error('Full error details:', error);
+      console.error('Error response:', error.response?.data);
+      alert('Failed to save entry. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-  };
+  }
+};
 
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -78,14 +92,23 @@ const DailyJournal = () => {
   };
 
   const formatDate = (date) => {
-    return new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+  console.log('Raw date from entry:', date); // Debug line
+  if (!date) return 'Invalid Date';
+  
+  try {
+    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
+    console.log('Formatted date:', formattedDate); // Debug line
+    return formattedDate;
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid Date';
+    }
   };
-
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedDate, searchTerm]);
@@ -176,9 +199,17 @@ const DailyJournal = () => {
             <div className="flex gap-3">
               <button
                 onClick={handleAddEntry}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex-1 font-medium"
+                disabled={submitting} // new entry
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex-1 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Save Entry
+                {submitting ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Entry"
+                )}
               </button>
               <button
                 onClick={() => {
@@ -195,15 +226,23 @@ const DailyJournal = () => {
 
         {/* Entries */}
         <div className="space-y-6 mb-8">
-          {paginatedEntries.length === 0 ? (
+          {/* new entry  */}
+          {loading ? (
             <div className="text-center py-12">
+              <Loader className="w-16 h-16 text-purple-500 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-500 text-lg">Loading your entries...</p>
+            </div>
+          ) : paginatedEntries.length === 0 ? (
+                      <div className="text-center py-12">
               <Cloud className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg">No entries found</p>
               <p className="text-gray-400">Try adjusting your search or date filter</p>
             </div>
           ) : (
             paginatedEntries.map((entry, index) => {
-              const moodConfig = moodEmojis[entry.mood];
+              console.log('Full entry object:', entry);
+
+              const moodConfig = moodEmojis[entry.data.mood] || moodEmojis.neutral;
               const IconComponent = moodConfig.icon;
               
               return (
@@ -218,10 +257,10 @@ const DailyJournal = () => {
                         <IconComponent className={`w-5 h-5 ${moodConfig.color}`} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-800">{formatDate(entry.date)}</h3>
+                        <h3 className="font-semibold text-gray-800">{formatDate(entry.data.date)}</h3>
                         <div className="flex items-center gap-1 text-sm text-gray-500">
                           <Clock className="w-3 h-3" />
-                          {formatTime(entry.timestamp)}
+                          {formatTime(entry.created_at)}
                         </div>
                       </div>
                     </div>
@@ -230,7 +269,7 @@ const DailyJournal = () => {
                     </span>
                   </div>
                   
-                  <p className="text-gray-700 leading-relaxed">{entry.text}</p>
+                  <p className="text-gray-700 leading-relaxed">{entry.data.content}</p>
                 </div>
               );
             })

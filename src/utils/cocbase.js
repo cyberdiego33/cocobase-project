@@ -1,8 +1,8 @@
 import { Cocobase } from "cocobase";
 
-const cb = new Cocobase({
+const db = new Cocobase({
 	apiKey: import.meta.env.VITE_COCOBASE_API_KEY, // Your API key
 	environment: "development", // or 'development'
 });
 
-export default cb;
+export default db;
