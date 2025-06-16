@@ -249,28 +249,15 @@ const DailyJournal = ({ isPublic = true }) => {
                 className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm w-full"
               />
             </div>
-            {/* Calendar: show input on desktop, icon on mobile */}
-            <div className="relative">
-              <div className="hidden sm:block">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm"
-                />
-              </div>
-              <button
-                type="button"
-                className="sm:hidden flex items-center justify-center p-2 rounded-xl border border-gray-200 bg-white/70 hover:bg-gray-100 focus:outline-none"
-                onClick={() => {
-                  const date = prompt("Enter date (YYYY-MM-DD):", selectedDate);
-                  if (date) setSelectedDate(date);
-                }}
-                aria-label="Pick date"
-              >
-                <Calendar className="w-5 h-5 text-gray-400" />
-              </button>
+            {/* Calendar: show small input on mobile, full on desktop */}
+            <div className="relative shrink-0">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 hidden sm:block" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="sm:pl-10 pl-2 pr-2 sm:pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm w-[130px] sm:w-auto"
+              />
             </div>
           </div>
           <div className="flex gap-4 items-center relative">
