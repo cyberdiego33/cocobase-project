@@ -238,25 +238,39 @@ const DailyJournal = ({ isPublic = true }) => {
 
         {/* Controls */}
         <div className="flex flex-wrap gap-4 mb-8 items-center justify-between">
-          <div className="flex gap-4 items-center">
-            <div className="relative">
+          <div className="flex gap-4 items-center w-full sm:w-auto">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search entries..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm"
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm w-full"
               />
             </div>
+            {/* Calendar: show input on desktop, icon on mobile */}
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm"
-              />
+              <div className="hidden sm:block">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm"
+                />
+              </div>
+              <button
+                type="button"
+                className="sm:hidden flex items-center justify-center p-2 rounded-xl border border-gray-200 bg-white/70 hover:bg-gray-100 focus:outline-none"
+                onClick={() => {
+                  const date = prompt("Enter date (YYYY-MM-DD):", selectedDate);
+                  if (date) setSelectedDate(date);
+                }}
+                aria-label="Pick date"
+              >
+                <Calendar className="w-5 h-5 text-gray-400" />
+              </button>
             </div>
           </div>
           <div className="flex gap-4 items-center relative">
@@ -276,7 +290,7 @@ const DailyJournal = ({ isPublic = true }) => {
                 className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-6 py-2 rounded-xl flex items-center gap-2 hover:from-blue-600 hover:to-teal-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 focus:outline-none"
               >
                 <UserCircle className="w-5 h-5" />
-                My Entries
+                {isAuthenticated ? "My Account" : "My Entries"}
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${
                     showAuthDropdown ? "rotate-180" : "rotate-0"
@@ -315,17 +329,29 @@ const DailyJournal = ({ isPublic = true }) => {
                     </button>
                   </>
                 ) : (
-                  <button
-                    className="w-full text-left px-6 py-3 text-red-600 hover:bg-red-50 transition-all duration-200 font-medium text-base"
-                    onClick={async () => {
-                      await db.logout();
-                      setUser(null);
-                      setIsAuthenticated(false);
-                      navigate("/");
-                    }}
-                  >
-                    Logout
-                  </button>
+                  <>
+                    <button
+                      className="w-full text-left px-6 py-3 text-gray-800 hover:bg-blue-50 transition-all duration-200 font-medium text-base"
+                      onClick={() => {
+                        setShowAuthDropdown(false);
+                        navigate("/");
+                      }}
+                    >
+                      Public Journal
+                    </button>
+                    <button
+                      className="w-full text-left px-6 py-3 text-red-600 hover:bg-red-50 transition-all duration-200 font-medium text-base border-t border-gray-100"
+                      onClick={async () => {
+                        await db.logout();
+                        setUser(null);
+                        setIsAuthenticated(false);
+                        navigate("/");
+                        setShowAuthDropdown(false);
+                      }}
+                    >
+                      Logout
+                    </button>
+                  </>
                 )}
               </div>
             </div>

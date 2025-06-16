@@ -27,18 +27,18 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white/80">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <form
         onSubmit={handleSubmit}
-        className="bg-white/90 p-8 rounded-xl shadow-xl w-full max-w-sm"
+        className="bg-white/80 backdrop-blur-lg p-8 rounded-xl shadow-xl w-full max-w-sm border border-white/30"
       >
-        <h2 className="text-2xl font-bold mb-6">
+        <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent text-center">
           {isLogin ? "Sign In" : "Create Account"}
         </h2>
         <input
           type="text"
           placeholder="Username"
-          className="w-full mb-4 px-4 py-2 border rounded"
+          className="w-full mb-4 px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
@@ -46,14 +46,14 @@ export default function Auth() {
         <input
           type="password"
           placeholder="Password"
-          className="w-full mb-6 px-4 py-2 border rounded"
+          className="w-full mb-6 px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/70"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         <button
           type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded mb-4"
+          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-2 rounded-xl mb-4 font-semibold shadow hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
           disabled={submitting}
         >
           {submitting
@@ -64,7 +64,7 @@ export default function Auth() {
         </button>
         <button
           type="button"
-          className="w-full text-blue-600 underline"
+          className="w-full text-purple-600 underline hover:text-pink-600 transition-all duration-200"
           onClick={() => setIsLogin((l) => !l)}
         >
           {isLogin
