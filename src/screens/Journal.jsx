@@ -18,7 +18,12 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+/**
+ * DailyJournal component handles both public and private journal views.
+ * @param {boolean} isPublic - Determines if showing public entries (true) or user's private entries (false)
+ */
 const DailyJournal = ({ isPublic = true }) => {
+  // State management for entries and UI
   const [entries, setEntries] = useState([]);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,15 +31,21 @@ const DailyJournal = ({ isPublic = true }) => {
   const [submitting, setSubmitting] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newEntry, setNewEntry] = useState({ text: "", mood: "happy" });
+
+  // Filtering and pagination state
   const [selectedDate, setSelectedDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // UI state for dropdowns and menus
   const [showAuthDropdown, setShowAuthDropdown] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [removingId, setRemovingId] = useState(null);
 
+  const navigate = useNavigate();
   const entriesPerPage = 3;
 
+  // Mood configuration for entry emotions
   const moodEmojis = {
     happy: {
       icon: Smile,
@@ -68,9 +79,7 @@ const DailyJournal = ({ isPublic = true }) => {
     },
   };
 
-  const navigate = useNavigate();
-
-  // Auth check on mount
+  // Check authentication status on mount
   useEffect(() => {
     db.getCurrentUser()
       .then((u) => {
@@ -83,7 +92,11 @@ const DailyJournal = ({ isPublic = true }) => {
       });
   }, []);
 
-  // Fetch entries with filtering
+  /**
+   * Fetches and filters entries based on public/private view
+   * Public: Shows entries with published=true and no userId
+   * Private: Shows only the logged-in user's entries
+   */
   const fetchEntries = async () => {
     try {
       setLoading(true);
@@ -115,11 +128,14 @@ const DailyJournal = ({ isPublic = true }) => {
       setLoading(false);
     }
   };
+  // Refresh entries when user or view type changes
   useEffect(() => {
     fetchEntries();
-    // eslint-disable-next-line
   }, [user, isPublic]);
 
+  /**
+   * Filters entries based on date and search term
+   */
   const filteredEntries = entries.filter((entry) => {
     const matchesDate = !selectedDate || entry.data.date === selectedDate;
     const matchesSearch =
@@ -134,6 +150,10 @@ const DailyJournal = ({ isPublic = true }) => {
     currentPage * entriesPerPage
   );
 
+  /**
+   * Handles creation of new journal entries
+   * Adds user information for private entries
+   */
   const handleAddEntry = async () => {
     if (newEntry.text.trim()) {
       try {
@@ -164,7 +184,9 @@ const DailyJournal = ({ isPublic = true }) => {
     }
   };
 
-  // Function to delete an entry by id, with loading effect
+  /**
+   * Handles entry deletion with loading state
+   */
   const handleRemove = async (id) => {
     setRemovingId(id);
     try {
@@ -178,6 +200,7 @@ const DailyJournal = ({ isPublic = true }) => {
     }
   };
 
+  // Utility functions for date/time formatting
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -203,6 +226,7 @@ const DailyJournal = ({ isPublic = true }) => {
       return "Invalid Date";
     }
   };
+  // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedDate, searchTerm]);

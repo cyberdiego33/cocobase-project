@@ -2,17 +2,27 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import db from "../utils/cocbase";
 
+/**
+ * Authentication component handling both login and registration.
+ * Toggles between login/register forms and redirects to private journal on success.
+ */
 export default function Auth() {
+  // Form state management
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
+  /**
+   * Handles form submission for both login and registration.
+   * Redirects to /my-journal on success.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Use appropriate auth method based on form mode
       if (isLogin) {
         await db.login(username, password);
       } else {
@@ -26,6 +36,7 @@ export default function Auth() {
     }
   };
 
+  // Render authentication form with gradient styling
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       <form
